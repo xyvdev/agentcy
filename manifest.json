@@ -1,0 +1,18 @@
+{
+  "name": "Agent Assistant",
+  "short_name": "AgentCy",
+  "description": "Your family personal AI companion",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
