@@ -1,9 +1,10 @@
-const CACHE_NAME = "agentcy-cache-v1";
+const CACHE_NAME = "agentcy-cache-v2";
 const STATIC_ASSETS = [
   "/",
   "/index.html",
   "/manifest.json",
-  "/icon.svg"
+  "/icon.svg",
+  "/heic2any.min.js"
 ];
 
 self.addEventListener("install", (event) => {
