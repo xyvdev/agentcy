@@ -975,7 +975,7 @@
       <form id="loginForm">
         <div class="form-group">
           <label class="form-label" for="usernameInput">Username</label>
-          <input type="text" id="usernameInput" class="form-input" placeholder="e.g. IamMom" required autocomplete="username">
+          <input type="text" id="usernameInput" class="form-input" placeholder="Enter your username" required autocomplete="username">
         </div>
 
         <div class="form-group">
@@ -1265,7 +1265,7 @@
         state.displayName = savedName || "Ma'am Leth";
         onLoginSuccess();
       } else {
-        usernameInput.value = "IamMom";
+        usernameInput.value = "";
         loginScreen.classList.remove('hidden');
       }
     }
