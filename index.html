@@ -1004,14 +1004,14 @@
         </svg>
       </div>
       <h2 class="permission-title">Welcome, Ma'am Leth!</h2>
-      <p class="permission-desc">To give you the most helpful experience on your phone, PA works best with a few features enabled:</p>
+      <p class="permission-desc">To give you the most helpful experience on your phone, Agent works best with a few features enabled:</p>
       
       <div class="permission-features">
         <div class="perm-item">
           <div class="perm-icon">🎙️</div>
           <div class="perm-info">
             <div class="perm-label">Microphone (Voice Typing)</div>
-            <div class="perm-detail">Dictate messages and talk to PA hands-free</div>
+            <div class="perm-detail">Dictate messages and talk to Agent hands-free</div>
           </div>
         </div>
         <div class="perm-item">
@@ -1061,10 +1061,10 @@
         </div>
         <div>
           <div class="assistant-name">
-            <span>PA</span>
+            <span>Agent</span>
             <span id="userBadge" class="user-pill">Ma'am Leth</span>
           </div>
-          <div class="assistant-role">Personal Assistant • Online</div>
+          <div class="assistant-role">Personal Agent • Online</div>
         </div>
       </div>
 
@@ -1089,10 +1089,10 @@
       <!-- Welcome Card (rendered when empty) -->
       <div id="welcomeCard" class="welcome-card">
         <div class="welcome-icon">👋</div>
-        <h2 id="welcomeGreeting" class="welcome-title">Good day, Ma'am Leth! I'm PA.</h2>
-        <p class="welcome-text">Your personal AI companion. Tap a quick question below or type your message to get started.</p>
+        <h2 id="welcomeGreeting" class="welcome-title">Good day, Ma'am Leth! I'm Agent.</h2>
+        <p class="welcome-text">Your personal Agent. Tap a quick question below or type your message to get started.</p>
         
-        <div class="chips-grid">
+        <div class="chips-grid" id="chipsGrid">
           <button class="chip-btn" data-prompt="What are today's top news headlines?">
             <span>📰</span><span>Top News Today</span>
           </button>
@@ -1313,8 +1313,9 @@
     function onLoginSuccess() {
       loginScreen.classList.add('hidden');
       userBadge.innerText = state.displayName;
-      welcomeGreeting.innerText = `Good day, ${state.displayName}! I'm PA.`;
+      welcomeGreeting.innerText = `Good day, ${state.displayName}! I'm Agent.`;
       initSession();
+      renderChips();
 
       // One-time Permissions Prompt for mobile features
       checkPermissionsPrompt();
@@ -1431,6 +1432,9 @@
     newChatBtn.addEventListener('click', () => {
       if (state.messages.length > 0 && confirm("Start a fresh conversation?")) {
         stopSpeech();
+        if (state.user && state.messages.length > 0) {
+          localStorage.setItem(`agentcy_last_chat_${state.user}`, JSON.stringify(state.messages));
+        }
         state.sessionId = `session_${state.user}_${Date.now()}`;
         localStorage.setItem(`agentcy_session_${state.user}`, state.sessionId);
         state.messages = [];
@@ -1528,6 +1532,7 @@
     function renderMessages() {
       if (state.messages.length === 0) {
         welcomeCard.style.display = 'block';
+        renderChips();
         chatLog.querySelectorAll('.msg-row').forEach(el => el.remove());
         return;
       }
@@ -1718,13 +1723,160 @@
 
     sendBtn.addEventListener('click', sendMessage);
 
-    document.querySelectorAll('.chip-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        chatInput.value = btn.dataset.prompt;
-        updateSendState();
-        sendMessage();
+    /* ================= DYNAMIC SUGGESTION CHIPS ================= */
+    const DEFAULT_CHIPS = [
+      { icon: "📰", label: "Top News Today", prompt: "What are today's top news headlines?" },
+      { icon: "🌦️", label: "Check Weather", prompt: "What's the weather like today?" },
+      { icon: "✍️", label: "Draft a Message", prompt: "Can you help me draft a warm and polite message?" },
+      { icon: "🍳", label: "Dinner Recipe", prompt: "Suggest a delicious and easy dinner idea for tonight." }
+    ];
+
+    function getDynamicChips() {
+      let history = [];
+      try {
+        const savedLast = localStorage.getItem(`agentcy_last_chat_${state.user}`);
+        if (savedLast) {
+          history = JSON.parse(savedLast);
+        }
+      } catch (e) {}
+
+      // If no archived previous chat, inspect current session if messages exist
+      if ((!history || history.length === 0) && state.messages && state.messages.length > 0) {
+        history = state.messages;
+      }
+
+      // If no previous conversation yet, return default chips
+      if (!history || history.length === 0) {
+        return DEFAULT_CHIPS;
+      }
+
+      const allText = history.map(m => (m.content || "").toLowerCase()).join(" ");
+      const dynamic = [];
+
+      // Weather Context
+      if (allText.includes('weather') || allText.includes('forecast') || allText.includes('rain') || allText.includes('temperature') || allText.includes('umbrella') || allText.includes('manila')) {
+        dynamic.push({
+          icon: "⛅",
+          label: "Tomorrow's Weather",
+          prompt: "What will the weather be like tomorrow?"
+        });
+        dynamic.push({
+          icon: "☂️",
+          label: "Chance of Rain",
+          prompt: "Is there any chance of rain later today?"
+        });
+      }
+
+      // Recipe / Food Context
+      if (allText.includes('recipe') || allText.includes('dinner') || allText.includes('food') || allText.includes('cook') || allText.includes('meal') || allText.includes('ingredients') || allText.includes('dish')) {
+        dynamic.push({
+          icon: "🛒",
+          label: "Grocery List",
+          prompt: "Can you make a quick grocery shopping list for that recipe?"
+        });
+        dynamic.push({
+          icon: "🥗",
+          label: "Healthy Side Dish",
+          prompt: "What is a healthy side dish or dessert to pair with it?"
+        });
+      }
+
+      // Messaging / Drafting Context
+      if (allText.includes('draft') || allText.includes('message') || allText.includes('email') || allText.includes('letter') || allText.includes('reply') || allText.includes('write')) {
+        dynamic.push({
+          icon: "📝",
+          label: "Follow-Up Reply",
+          prompt: "Can you help me write a warm follow-up message?"
+        });
+        dynamic.push({
+          icon: "✨",
+          label: "Refine & Shorten",
+          prompt: "Can you help me refine and polish the message we drafted?"
+        });
+      }
+
+      // News & Updates Context
+      if (allText.includes('news') || allText.includes('headline') || allText.includes('philippines') || allText.includes('event') || allText.includes('update')) {
+        dynamic.push({
+          icon: "🔍",
+          label: "News Deep Dive",
+          prompt: "Can you tell me more details about today's top headline?"
+        });
+        dynamic.push({
+          icon: "📰",
+          label: "Latest Updates",
+          prompt: "Are there any breaking news updates right now?"
+        });
+      }
+
+      // Health, Reminders & Planning Context
+      if (allText.includes('schedule') || allText.includes('plan') || allText.includes('todo') || allText.includes('health') || allText.includes('doctor') || allText.includes('medicine') || allText.includes('reminder')) {
+        dynamic.push({
+          icon: "⏰",
+          label: "Daily Planning",
+          prompt: "Can you help me organize my to-do list for today?"
+        });
+        dynamic.push({
+          icon: "🌿",
+          label: "Wellness Tips",
+          prompt: "What are some simple wellness and relaxation tips for today?"
+        });
+      }
+
+      // Photo / Visual Context
+      if (history.some(m => m.image) || allText.includes('photo') || allText.includes('picture') || allText.includes('image')) {
+        dynamic.push({
+          icon: "📷",
+          label: "More on Photo",
+          prompt: "Can you share more information about the photo I showed you earlier?"
+        });
+      }
+
+      // General intelligent continuation if previous turns happened
+      if (dynamic.length < 2 && history.length >= 2) {
+        dynamic.push({
+          icon: "💬",
+          label: "Continue Previous Chat",
+          prompt: "Let's continue what we were talking about earlier."
+        });
+        dynamic.push({
+          icon: "📋",
+          label: "Summarize Discussion",
+          prompt: "Can you give me a brief summary of what we covered in our last conversation?"
+        });
+      }
+
+      // Fill remaining slots with defaults so there are always 4 balanced chips
+      DEFAULT_CHIPS.forEach(def => {
+        if (dynamic.length < 4 && !dynamic.some(d => d.label === def.label)) {
+          dynamic.push(def);
+        }
       });
-    });
+
+      return dynamic.slice(0, 4);
+    }
+
+    function renderChips() {
+      const chipsGrid = document.getElementById('chipsGrid');
+      if (!chipsGrid) return;
+
+      const chips = getDynamicChips();
+      chipsGrid.innerHTML = '';
+
+      chips.forEach(chip => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'chip-btn';
+        btn.dataset.prompt = chip.prompt;
+        btn.innerHTML = `<span>${chip.icon}</span><span>${chip.label}</span>`;
+        btn.addEventListener('click', () => {
+          chatInput.value = chip.prompt;
+          updateSendState();
+          sendMessage();
+        });
+        chipsGrid.appendChild(btn);
+      });
+    }
 
     async function sendMessage() {
       const text = chatInput.value.trim();
@@ -1743,7 +1895,7 @@
       welcomeCard.style.display = 'none';
 
       // Fallback display text if only image was submitted
-      const displayText = text || "Shared a photo with PA";
+      const displayText = text || "Shared a photo with Agent";
 
       // Append user message to UI
       const userMsgIndex = state.messages.length;
@@ -1836,6 +1988,9 @@
 
         state.messages.push({ role: 'assistant', content: fullResponse });
         saveMessages();
+        if (state.user) {
+          localStorage.setItem(`agentcy_last_chat_${state.user}`, JSON.stringify(state.messages));
+        }
       } catch (err) {
         botBubble.innerHTML = `<p style="color: #fca5a5;">⚠️ ${err.message}</p>`;
       } finally {
