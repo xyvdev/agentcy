@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Agent Assistant — Personal AI Companion</title>
   <meta name="description" content="Your family personal AI companion. Friendly, helpful, and always available.">
-  <meta name="theme-color" content="#0f172a">
+  <meta name="theme-color" content="#090d16">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="AgentCy">
@@ -195,6 +195,171 @@
       display: none;
     }
 
+    /* ================= PERMISSION ONBOARDING MODAL ================= */
+    .permission-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(9, 13, 22, 0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 1100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    .permission-overlay.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .permission-card {
+      width: 100%;
+      max-width: 420px;
+      background: rgba(17, 25, 40, 0.95);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      border-radius: var(--radius-lg);
+      padding: 28px 24px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 40px rgba(99, 102, 241, 0.2);
+      text-align: center;
+      animation: modalSlideUp 0.3s ease-out;
+    }
+
+    @keyframes modalSlideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .permission-header-icon {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 16px;
+      background: var(--primary-gradient);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.45);
+      color: #fff;
+    }
+
+    .permission-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .permission-desc {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .permission-features {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 22px;
+      text-align: left;
+    }
+
+    .perm-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--surface-border);
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      transition: background 0.15s;
+    }
+
+    .perm-icon {
+      font-size: 20px;
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .perm-info {
+      flex: 1;
+    }
+
+    .perm-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #f1f5f9;
+      margin-bottom: 2px;
+    }
+
+    .perm-detail {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.3;
+    }
+
+    .permission-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .btn-perm-primary {
+      width: 100%;
+      background: var(--primary-gradient);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 13px;
+      cursor: pointer;
+      box-shadow: 0 8px 18px -4px rgba(99, 102, 241, 0.5);
+      transition: transform 0.15s, opacity 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-perm-primary:active {
+      transform: scale(0.98);
+    }
+
+    .btn-perm-secondary {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 13.5px;
+      padding: 8px;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+
+    .btn-perm-secondary:hover {
+      color: #fff;
+    }
+
+    .permission-note {
+      font-size: 11px;
+      color: #64748b;
+      line-height: 1.4;
+    }
+
     /* ================= MAIN CHAT UI ================= */
     #appContainer {
       display: flex;
@@ -269,12 +434,12 @@
     }
 
     .user-pill {
-      font-size: 11px;
+      font-size: 11.5px;
       font-weight: 600;
       background: rgba(99, 102, 241, 0.2);
       color: #a5b4fc;
       border: 1px solid rgba(99, 102, 241, 0.3);
-      padding: 2px 8px;
+      padding: 2px 9px;
       border-radius: 12px;
     }
 
@@ -441,7 +606,24 @@
       color: #fff;
     }
 
-    /* Message Actions (Read Aloud, Copy) */
+    /* Attached image preview inside chat bubble */
+    .msg-image {
+      margin-bottom: 10px;
+      border-radius: 12px;
+      overflow: hidden;
+      max-width: 280px;
+    }
+
+    .msg-image img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      cursor: pointer;
+    }
+
+    /* Message Actions */
     .msg-actions {
       display: flex;
       align-items: center;
@@ -495,23 +677,76 @@
       50% { opacity: 0; }
     }
 
-    /* Input Bar */
+    /* Footer & Input Bar */
     footer {
-      padding: 12px 16px calc(12px + var(--safe-bottom));
+      padding: 10px 16px calc(12px + var(--safe-bottom));
       background: rgba(17, 25, 40, 0.85);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border-top: 1px solid var(--surface-border);
     }
 
+    /* Image Preview bar above input */
+    .image-preview-bar {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--surface-border);
+      border-bottom: none;
+      border-radius: 16px 16px 0 0;
+      margin-bottom: -1px;
+    }
+
+    .image-preview-bar.active {
+      display: flex;
+    }
+
+    .image-thumb {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .image-preview-info {
+      flex: 1;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .btn-remove-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: #fff;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.15s;
+    }
+
+    .btn-remove-thumb:hover {
+      background: rgba(239, 68, 68, 0.7);
+    }
+
     .input-bar {
       display: flex;
       align-items: flex-end;
-      gap: 8px;
+      gap: 6px;
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--surface-border);
       border-radius: 26px;
-      padding: 6px 8px 6px 16px;
+      padding: 6px 8px 6px 10px;
       transition: border-color 0.2s;
     }
 
@@ -532,7 +767,7 @@
       max-height: 120px;
       min-height: 24px;
       line-height: 24px;
-      padding: 4px 0;
+      padding: 4px 4px;
     }
 
     #chatInput::placeholder {
@@ -540,19 +775,31 @@
     }
 
     .icon-btn {
-      width: 40px;
-      height: 40px;
+      width: 38px;
+      height: 38px;
       border-radius: 50%;
       border: none;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: transform 0.15s, background 0.15s;
+      flex-shrink: 0;
+      transition: transform 0.15s, background 0.15s, color 0.15s;
     }
 
     .icon-btn:active {
       transform: scale(0.92);
+    }
+
+    /* Attach Button */
+    #attachBtn {
+      background: transparent;
+      color: var(--text-muted);
+    }
+
+    #attachBtn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.08);
     }
 
     /* Mic Button */
@@ -609,6 +856,35 @@
       gap: 6px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
+
+    /* App Toast */
+    .app-toast {
+      position: fixed;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-40px);
+      background: rgba(17, 25, 40, 0.95);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      color: #fff;
+      font-size: 13.5px;
+      padding: 10px 18px;
+      border-radius: 24px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 2000;
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .app-toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
@@ -645,7 +921,61 @@
     </div>
   </div>
 
-  <!-- ================= CHAT CONTAINER ================= -->
+  <!-- ================= ONE-TIME PERMISSIONS MODAL ================= -->
+  <div id="permissionModal" class="permission-overlay hidden">
+    <div class="permission-card">
+      <div class="permission-header-icon">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <h2 class="permission-title">Welcome, Ma'am Leth!</h2>
+      <p class="permission-desc">To give you the most helpful experience on your phone, PA works best with a few features enabled:</p>
+      
+      <div class="permission-features">
+        <div class="perm-item">
+          <div class="perm-icon">🎙️</div>
+          <div class="perm-info">
+            <div class="perm-label">Microphone (Voice Typing)</div>
+            <div class="perm-detail">Dictate messages and talk to PA hands-free</div>
+          </div>
+        </div>
+        <div class="perm-item">
+          <div class="perm-icon">📷</div>
+          <div class="perm-info">
+            <div class="perm-label">Camera & Photo Gallery</div>
+            <div class="perm-detail">Take pictures or select from photos to ask questions</div>
+          </div>
+        </div>
+        <div class="perm-item">
+          <div class="perm-icon">📍</div>
+          <div class="perm-info">
+            <div class="perm-label">Location</div>
+            <div class="perm-detail">Receive accurate local weather forecasts and area info</div>
+          </div>
+        </div>
+        <div class="perm-item">
+          <div class="perm-icon">🔔</div>
+          <div class="perm-info">
+            <div class="perm-label">Notifications</div>
+            <div class="perm-detail">Get timely morning briefings and reminder alerts</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="permission-buttons">
+        <button type="button" id="btnAllowPermissions" class="btn-perm-primary">
+          <span>✨ Allow Permissions</span>
+        </button>
+        <button type="button" id="btnSkipPermissions" class="btn-perm-secondary">
+          <span>Skip for now</span>
+        </button>
+      </div>
+      <div class="permission-note">Your privacy is respected. You can modify these anytime in your phone's browser settings.</div>
+    </div>
+  </div>
+
+  <!-- ================= MAIN CHAT UI ================= -->
   <div id="appContainer">
     <header>
       <div class="header-assistant">
@@ -658,7 +988,7 @@
         <div>
           <div class="assistant-name">
             <span>PA</span>
-            <span id="userBadge" class="user-pill">Mom</span>
+            <span id="userBadge" class="user-pill">Ma'am Leth</span>
           </div>
           <div class="assistant-role">Personal Assistant • Online</div>
         </div>
@@ -679,7 +1009,7 @@
       <!-- Welcome Card (rendered when empty) -->
       <div id="welcomeCard" class="welcome-card">
         <div class="welcome-icon">👋</div>
-        <h2 id="welcomeGreeting" class="welcome-title">Good day! I'm PA.</h2>
+        <h2 id="welcomeGreeting" class="welcome-title">Good day, Ma'am Leth! I'm PA.</h2>
         <p class="welcome-text">Your personal AI companion. Tap a quick question below or type your message to get started.</p>
         
         <div class="chips-grid">
@@ -706,10 +1036,28 @@
           Listening... Speak now
         </div>
 
+        <!-- Image attachment preview bar -->
+        <div id="imagePreviewBar" class="image-preview-bar">
+          <img id="imageThumb" class="image-thumb" src="" alt="Thumbnail">
+          <div id="imagePreviewName" class="image-preview-info">Photo attached</div>
+          <button type="button" id="removeThumbBtn" class="btn-remove-thumb" title="Remove photo">✕</button>
+        </div>
+
         <div class="input-bar">
+          <!-- Hidden file input for Camera & Photo Gallery -->
+          <input type="file" id="photoInput" accept="image/*" style="display: none;">
+          
+          <button type="button" id="attachBtn" class="icon-btn" title="Take photo or choose from gallery">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+          </button>
+
           <textarea id="chatInput" rows="1" placeholder="Type or speak a message..."></textarea>
           
-          <button id="micBtn" class="icon-btn" title="Voice dictation">
+          <button type="button" id="micBtn" class="icon-btn" title="Voice dictation">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
               <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
@@ -718,7 +1066,7 @@
             </svg>
           </button>
 
-          <button id="sendBtn" class="icon-btn" title="Send message" disabled>
+          <button type="button" id="sendBtn" class="icon-btn" title="Send message" disabled>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
             </svg>
@@ -728,12 +1076,14 @@
     </footer>
   </div>
 
+  <div id="appToast" class="app-toast"></div>
+
   <script>
     /* ================= APP STATE ================= */
     const state = {
       user: null,
       token: null,
-      displayName: "Mom",
+      displayName: "Ma'am Leth",
       sessionId: null,
       messages: [],
       isGenerating: false,
@@ -756,6 +1106,10 @@
     const loginBtn = document.getElementById('loginBtn');
     const loginError = document.getElementById('loginError');
 
+    const permissionModal = document.getElementById('permissionModal');
+    const btnAllowPermissions = document.getElementById('btnAllowPermissions');
+    const btnSkipPermissions = document.getElementById('btnSkipPermissions');
+
     const userBadge = document.getElementById('userBadge');
     const welcomeGreeting = document.getElementById('welcomeGreeting');
     const welcomeCard = document.getElementById('welcomeCard');
@@ -766,6 +1120,26 @@
     const newChatBtn = document.getElementById('newChatBtn');
     const logoutBtn = document.getElementById('logoutBtn');
     const listeningToast = document.getElementById('listeningToast');
+    const appToast = document.getElementById('appToast');
+
+    const attachBtn = document.getElementById('attachBtn');
+    const photoInput = document.getElementById('photoInput');
+    const imagePreviewBar = document.getElementById('imagePreviewBar');
+    const imageThumb = document.getElementById('imageThumb');
+    const imagePreviewName = document.getElementById('imagePreviewName');
+    const removeThumbBtn = document.getElementById('removeThumbBtn');
+
+    let pendingImage = null; // { dataUrl, name }
+
+    /* Toast Helper */
+    function showToast(msg) {
+      if (!appToast) return;
+      appToast.innerText = msg;
+      appToast.classList.add('show');
+      setTimeout(() => {
+        appToast.classList.remove('show');
+      }, 3500);
+    }
 
     /* Initialize Auth */
     function initAuth() {
@@ -776,7 +1150,7 @@
       if (savedToken && savedUser) {
         state.token = savedToken;
         state.user = savedUser;
-        state.displayName = savedName || savedUser;
+        state.displayName = savedName || "Ma'am Leth";
         onLoginSuccess();
       } else {
         usernameInput.value = "IamMom";
@@ -807,7 +1181,7 @@
 
         state.token = data.token;
         state.user = data.username;
-        state.displayName = data.display_name || data.username;
+        state.displayName = data.display_name || "Ma'am Leth";
 
         const storage = rememberMe.checked ? localStorage : sessionStorage;
         storage.setItem('agentcy_token', data.token);
@@ -829,7 +1203,88 @@
       userBadge.innerText = state.displayName;
       welcomeGreeting.innerText = `Good day, ${state.displayName}! I'm PA.`;
       initSession();
+
+      // One-time Permissions Prompt for mobile features
+      checkPermissionsPrompt();
     }
+
+    /* ================= ONE-TIME PERMISSIONS ONBOARDING ================= */
+    function checkPermissionsPrompt() {
+      const alreadyPrompted = localStorage.getItem('agentcy_permissions_requested');
+      if (!alreadyPrompted) {
+        setTimeout(() => {
+          permissionModal.classList.remove('hidden');
+        }, 500);
+      }
+    }
+
+    btnAllowPermissions.addEventListener('click', async () => {
+      btnAllowPermissions.disabled = true;
+      btnAllowPermissions.innerHTML = `<span>⏳ Enabling features...</span>`;
+
+      // 1. Microphone & Camera (WebRTC)
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+          // Stop all tracks immediately so hardware lights turn off
+          stream.getTracks().forEach(track => track.stop());
+        }
+      } catch (mediaErr) {
+        console.log("Dual media request note, falling back to audio:", mediaErr);
+        try {
+          const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          audioStream.getTracks().forEach(track => track.stop());
+        } catch (audioErr) {
+          console.log("Audio request note:", audioErr);
+        }
+      }
+
+      // 2. Geolocation (Location)
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            const coords = {
+              lat: pos.coords.latitude,
+              lon: pos.coords.longitude
+            };
+            localStorage.setItem('agentcy_location', JSON.stringify(coords));
+
+            // Reverse geocode to resolve human city name (e.g. Manila, Quezon City)
+            try {
+              const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${coords.lat}&longitude=${coords.lon}`);
+              if (res.ok) {
+                const geo = await res.json();
+                const city = geo.city || geo.locality || geo.principalSubdivision || "";
+                const country = geo.countryName || "";
+                if (city) {
+                  const locationString = country ? `${city}, ${country}` : city;
+                  localStorage.setItem('agentcy_city', locationString);
+                }
+              }
+            } catch (geoErr) {}
+          },
+          (geoErr) => console.log("Location permission note:", geoErr),
+          { timeout: 8000, enableHighAccuracy: false }
+        );
+      }
+
+      // 3. Web Notifications
+      if ('Notification' in window && Notification.permission === 'default') {
+        try {
+          await Notification.requestPermission();
+        } catch (notifErr) {}
+      }
+
+      // Mark permission modal as completed
+      localStorage.setItem('agentcy_permissions_requested', 'true');
+      permissionModal.classList.add('hidden');
+      showToast(`✨ Permissions saved! Welcome, ${state.displayName}.`);
+    });
+
+    btnSkipPermissions.addEventListener('click', () => {
+      localStorage.setItem('agentcy_permissions_requested', 'true');
+      permissionModal.classList.add('hidden');
+    });
 
     logoutBtn.addEventListener('click', () => {
       if (confirm("Log out of Agent Assistant?")) {
@@ -864,7 +1319,7 @@
     }
 
     newChatBtn.addEventListener('click', () => {
-      if (state.messages.length > 0 && confirm("Start a new conversation?")) {
+      if (state.messages.length > 0 && confirm("Start a fresh conversation?")) {
         stopSpeech();
         state.sessionId = `session_${state.user}_${Date.now()}`;
         localStorage.setItem(`agentcy_session_${state.user}`, state.sessionId);
@@ -880,6 +1335,38 @@
       }
     }
 
+    /* ================= PHOTO & GALLERY ATTACHMENTS ================= */
+    attachBtn.addEventListener('click', () => {
+      photoInput.click();
+    });
+
+    photoInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        pendingImage = {
+          dataUrl: event.target.result,
+          name: file.name
+        };
+        imageThumb.src = pendingImage.dataUrl;
+        imagePreviewName.innerText = file.name;
+        imagePreviewBar.classList.add('active');
+        updateSendState();
+        chatInput.focus();
+      };
+      reader.readAsDataURL(file);
+      photoInput.value = '';
+    });
+
+    removeThumbBtn.addEventListener('click', () => {
+      pendingImage = null;
+      imagePreviewBar.classList.remove('active');
+      imageThumb.src = '';
+      updateSendState();
+    });
+
     /* ================= CHAT RENDERING ================= */
     function renderMessages() {
       if (state.messages.length === 0) {
@@ -892,19 +1379,34 @@
       chatLog.querySelectorAll('.msg-row').forEach(el => el.remove());
 
       state.messages.forEach((msg, idx) => {
-        appendMessageElement(msg.role, msg.content, idx);
+        appendMessageElement(msg.role, msg.content, idx, msg.image);
       });
       chatLog.scrollTop = chatLog.scrollHeight;
     }
 
-    function appendMessageElement(role, content, idx) {
+    function appendMessageElement(role, content, idx, imageData = null) {
       const row = document.createElement('div');
       row.className = `msg-row ${role}`;
       row.id = `msg-${idx}`;
 
       const bubble = document.createElement('div');
       bubble.className = 'msg-bubble';
-      bubble.innerHTML = formatMarkdown(content);
+
+      // Render image if present
+      if (imageData) {
+        const imgContainer = document.createElement('div');
+        imgContainer.className = 'msg-image';
+        const img = document.createElement('img');
+        img.src = imageData;
+        img.alt = "Attached Photo";
+        img.onclick = () => window.open(imageData, '_blank');
+        imgContainer.appendChild(img);
+        bubble.appendChild(imgContainer);
+      }
+
+      const textNode = document.createElement('div');
+      textNode.innerHTML = formatMarkdown(content);
+      bubble.appendChild(textNode);
       row.appendChild(bubble);
 
       if (role === 'assistant') {
@@ -972,7 +1474,6 @@
       utterance.rate = 1.0;
       utterance.pitch = 1.0;
 
-      // Prefer natural English voices
       const voices = window.speechSynthesis.getVoices();
       const naturalVoice = voices.find(v => v.lang.includes('en') && (v.name.includes('Natural') || v.name.includes('Siri') || v.name.includes('Google')));
       if (naturalVoice) utterance.voice = naturalVoice;
@@ -1037,7 +1538,7 @@
         }
       });
     } else {
-      micBtn.style.display = 'none'; // Graceful degradation
+      micBtn.style.display = 'none';
     }
 
     /* ================= SENDING MESSAGES ================= */
@@ -1046,7 +1547,9 @@
     function updateSendState() {
       chatInput.style.height = 'auto';
       chatInput.style.height = `${Math.min(chatInput.scrollHeight, 120)}px`;
-      sendBtn.disabled = !chatInput.value.trim() || state.isGenerating;
+      const hasText = !!chatInput.value.trim();
+      const hasImage = !!pendingImage;
+      sendBtn.disabled = (!hasText && !hasImage) || state.isGenerating;
     }
 
     chatInput.addEventListener('keydown', (e) => {
@@ -1068,19 +1571,51 @@
 
     async function sendMessage() {
       const text = chatInput.value.trim();
-      if (!text || state.isGenerating) return;
+      const attached = pendingImage;
+
+      if (!text && !attached) return;
+      if (state.isGenerating) return;
 
       stopSpeech();
       chatInput.value = "";
+      pendingImage = null;
+      imagePreviewBar.classList.remove('active');
+      imageThumb.src = '';
       updateSendState();
 
       welcomeCard.style.display = 'none';
 
-      // Append user message
+      // Fallback display text if only image was submitted
+      const displayText = text || "Shared a photo with PA";
+
+      // Append user message to UI
       const userMsgIndex = state.messages.length;
-      state.messages.push({ role: 'user', content: text });
-      appendMessageElement('user', text, userMsgIndex);
+      state.messages.push({
+        role: 'user',
+        content: displayText,
+        image: attached ? attached.dataUrl : null
+      });
+      appendMessageElement('user', displayText, userMsgIndex, attached ? attached.dataUrl : null);
       saveMessages();
+
+      // Formulate prompt with rich context
+      let promptToSend = text || "Please inspect this attached photo.";
+      
+      // Inject saved location context for weather/nearby queries
+      const savedCity = localStorage.getItem('agentcy_city');
+      if (savedCity && (
+        promptToSend.toLowerCase().includes('weather') ||
+        promptToSend.toLowerCase().includes('forecast') ||
+        promptToSend.toLowerCase().includes('today') ||
+        promptToSend.toLowerCase().includes('traffic') ||
+        promptToSend.toLowerCase().includes('nearby')
+      )) {
+        promptToSend = `[Context: User is located in ${savedCity}]\n${promptToSend}`;
+      }
+
+      if (attached) {
+        promptToSend = `[Attached Photo: ${attached.name}]\n${promptToSend}`;
+      }
 
       // Create streaming assistant message bubble
       state.isGenerating = true;
@@ -1108,7 +1643,7 @@
             'Authorization': `Bearer ${state.token}`
           },
           body: JSON.stringify({
-            prompt: text,
+            prompt: promptToSend,
             session_id: state.sessionId
           })
         });
@@ -1122,7 +1657,7 @@
         fullResponse = data.response || "No response received.";
         botBubble.innerHTML = formatMarkdown(fullResponse);
 
-        // Add actions
+        // Actions
         const actions = document.createElement('div');
         actions.className = 'msg-actions';
         const ttsBtn = document.createElement('button');
