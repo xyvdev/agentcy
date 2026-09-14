@@ -6,23 +6,21 @@
 
 export async function onRequest(context) {
   const { request, params, env } = context;
-  
-  // Default VPS bridge endpoint (or override with CF env var VPS_BACKEND_URL)
-  const backendBase = env.VPS_BACKEND_URL || "http://168.138.75.255/api/agentcy";
-  
+
+  // Real HTTPS domain on the VPS via Let's Encrypt
+  const backendBase = env.VPS_BACKEND_URL || "https://168.138.75.255.sslip.io/api/agentcy";
+
   // Extract path parameters: e.g. ["auth", "login"] -> "auth/login"
   const path = Array.isArray(params.path) ? params.path.join("/") : (params.path || "");
   const targetUrl = new URL(`${backendBase}/api/${path}`);
-  
-  // Forward original query parameters
+
+  // Forward query parameters
   const requestUrl = new URL(request.url);
   targetUrl.search = requestUrl.search;
 
-  // Clone headers and set forwarded attributes
+  // Clone headers
   const headers = new Headers(request.headers);
-  headers.set("Host", "168.138.75.255");
-  headers.set("X-Forwarded-Host", requestUrl.host);
-  headers.set("X-Forwarded-Proto", "https");
+  headers.delete("host"); // Let fetch set host header automatically to prevent 1003 error
 
   const forwardOptions = {
     method: request.method,
@@ -30,7 +28,7 @@ export async function onRequest(context) {
     redirect: "follow",
   };
 
-  // Only attach body for methods that allow it
+  // Only attach body for POST/PUT/PATCH
   if (!["GET", "HEAD"].includes(request.method.toUpperCase())) {
     forwardOptions.body = request.body;
   }
@@ -38,7 +36,6 @@ export async function onRequest(context) {
   try {
     const backendResponse = await fetch(targetUrl.toString(), forwardOptions);
 
-    // Copy response headers and ensure CORS is friendly
     const responseHeaders = new Headers(backendResponse.headers);
     responseHeaders.set("Access-Control-Allow-Origin", "*");
     responseHeaders.set("Access-Control-Allow-Headers", "*");
