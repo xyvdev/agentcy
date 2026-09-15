@@ -1945,7 +1945,7 @@
       let fullResponse = "";
 
       try {
-        const response = await fetch('/api/chat', {
+        const response = await fetch('/api/chat/stream', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1959,11 +1959,59 @@
 
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
-          throw new Error(errData.detail || "Assistant error occurred");
+          throw new Error(errData.detail || errData.error || "Assistant error occurred");
         }
 
-        const data = await response.json();
-        fullResponse = data.response || "No response received.";
+        if (!response.body) {
+          throw new Error("Streaming is not supported in this browser environment.");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let buffer = "";
+        let accumulatedText = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith("data: ")) continue;
+            const jsonStr = trimmed.slice(6);
+            try {
+              const data = JSON.parse(jsonStr);
+              if (data.chunk) {
+                accumulatedText += data.chunk;
+                botBubble.innerHTML = formatMarkdown(accumulatedText) + '<span class="typing-cursor"></span>';
+                chatLog.scrollTop = chatLog.scrollHeight;
+              }
+              if (data.error) {
+                throw new Error(data.error);
+              }
+              if (data.final_response && !accumulatedText) {
+                accumulatedText = data.final_response;
+              }
+            } catch (parseErr) {
+              if (parseErr.message && !parseErr.message.includes("JSON")) {
+                throw parseErr;
+              }
+            }
+          }
+        }
+
+        if (buffer.trim().startsWith("data: ")) {
+          try {
+            const data = JSON.parse(buffer.trim().slice(6));
+            if (data.chunk) accumulatedText += data.chunk;
+          } catch (e) {}
+        }
+
+        fullResponse = accumulatedText || "No response received.";
         botBubble.innerHTML = formatMarkdown(fullResponse);
 
         // Actions
@@ -1991,6 +2039,7 @@
         if (state.user) {
           localStorage.setItem(`agentcy_last_chat_${state.user}`, JSON.stringify(state.messages));
         }
+        renderChips();
       } catch (err) {
         botBubble.innerHTML = `<p style="color: #fca5a5;">⚠️ ${err.message}</p>`;
       } finally {
