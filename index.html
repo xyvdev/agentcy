@@ -1398,14 +1398,12 @@
     });
 
     logoutBtn.addEventListener('click', () => {
-      if (confirm("Log out of Agent Assistant?")) {
         localStorage.removeItem('agentcy_token');
         sessionStorage.removeItem('agentcy_token');
         localStorage.removeItem('agentcy_messages');
         state.token = null;
         state.user = null;
         loginScreen.classList.remove('hidden');
-      }
     });
 
     /* ================= SESSIONS & HISTORY ================= */
@@ -1430,7 +1428,6 @@
     }
 
     newChatBtn.addEventListener('click', () => {
-      if (state.messages.length > 0 && confirm("Start a fresh conversation?")) {
         stopSpeech();
         if (state.user && state.messages.length > 0) {
           localStorage.setItem(`agentcy_last_chat_${state.user}`, JSON.stringify(state.messages));
@@ -1440,7 +1437,6 @@
         state.messages = [];
         localStorage.removeItem(`agentcy_msgs_${state.sessionId}`);
         renderMessages();
-      }
     });
 
     function saveMessages() {
