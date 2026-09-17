@@ -45,12 +45,24 @@ async function loadWeightsBuffer() {
   }
 
   // Stream fetch with progress reporting
+  send('PROGRESS', { percent: 0 });
   send('STATUS', { status: 'downloading', percent: 0 });
 
-  // Try local asset first, fall back to Hugging Face CDN (avoids Cloudflare Pages 25MB file limit)
-  let response = await fetch(LOCAL_WEIGHTS_URL).catch(() => null);
-  if (!response || !response.ok) {
-    console.log('[NeedleWorker] Local weights not present, streaming from Hugging Face CDN...');
+  // Try local asset first, fall back to Hugging Face CDN (avoids Cloudflare Pages 25MB file limit and SPA 200 fallback)
+  let response = null;
+  try {
+    const localRes = await fetch(LOCAL_WEIGHTS_URL);
+    const ct = localRes ? (localRes.headers.get('content-type') || '') : '';
+    const cl = Number(localRes.headers.get('content-length')) || 0;
+    if (localRes.ok && !ct.includes('text/html') && cl > 20000000) {
+      response = localRes;
+    }
+  } catch (e) {
+    // Local asset fetch error, fallback to CDN
+  }
+
+  if (!response) {
+    console.log('[NeedleWorker] Streaming model weights from Hugging Face CDN...');
     response = await fetch(REMOTE_WEIGHTS_URL);
   }
 
@@ -98,6 +110,7 @@ async function loadWeightsBuffer() {
 
 async function initEngine(tools = [], systemPrompt = "date: 2026-09-17; locale: en-US; device: phone") {
   try {
+    send('PROGRESS', { percent: 0 });
     send('STATUS', { status: 'initializing' });
 
     // Load Emscripten glue script
@@ -105,11 +118,19 @@ async function initEngine(tools = [], systemPrompt = "date: 2026-09-17; locale: 
       importScripts('/needle/needle.js');
     }
 
+    // Concurrently fetch WASM binary and model weights to maximize speed and bypass path rewrites
+    const [wasmBinary, weightsBuffer] = await Promise.all([
+      fetch(WASM_URL).then(async (res) => {
+        if (!res.ok) throw new Error(`Failed to fetch WASM binary: ${res.status}`);
+        return await res.arrayBuffer();
+      }),
+      loadWeightsBuffer()
+    ]);
+
     Module = await createNeedle({
-      locateFile: (f) => `/needle/${f}`
+      wasmBinary
     });
 
-    const weightsBuffer = await loadWeightsBuffer();
     send('STATUS', { status: 'loading_weights' });
 
     const weightsView = new Uint8Array(weightsBuffer);

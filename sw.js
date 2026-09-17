@@ -1,4 +1,4 @@
-const CACHE_NAME = "agentcy-cache-v5";
+const CACHE_NAME = "agentcy-cache-v6";
 const STATIC_ASSETS = [
   "/",
   "/index.html",
@@ -9,7 +9,8 @@ const STATIC_ASSETS = [
   "/vector-store.js",
   "/needle-worker.js",
   "/needle/needle.js",
-  "/needle/needle.wasm"
+  "/needle/needle.wasm",
+  "/needle.wasm"
 ];
 
 self.addEventListener("install", (event) => {

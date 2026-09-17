@@ -1518,6 +1518,13 @@
 
     function initNeedle() {
       if (needleWorker) return;
+      const statusEl = document.getElementById('needleStatus');
+      if (statusEl) {
+        statusEl.innerText = '⏳ (0%)';
+        statusEl.title = 'Initializing Offline Engine...';
+      }
+      console.log('[Needle] Starting background engine initialization...');
+
       try {
         needleWorker = new Worker('/needle-worker.js');
 
@@ -1527,6 +1534,7 @@
 
           switch (type) {
             case 'PROGRESS':
+              console.log(`[Needle] Download progress: ${percent}%`);
               if (statusEl) {
                 statusEl.innerText = `⏳ (${percent}%)`;
                 statusEl.title = `Downloading Offline Engine (${percent}%)`;
@@ -1539,7 +1547,7 @@
                 statusEl.innerText = '⚡';
                 statusEl.title = 'Offline Engine Ready';
               }
-              console.log('[Needle] Engine ready on-device.');
+              console.log('[Needle] Engine ready on-device! ⚡');
               break;
 
             case 'ERROR':
@@ -1547,7 +1555,7 @@
               needleReady = false;
               if (statusEl) {
                 statusEl.innerText = '☁️';
-                statusEl.title = 'Cloud Active (Offline Engine Unavailable)';
+                statusEl.title = `Cloud Active (Offline Engine: ${error})`;
               }
               break;
 
@@ -1570,9 +1578,12 @@
         };
 
         needleWorker.onerror = (err) => {
-          console.warn('[Needle] Worker failed to initialize:', err);
+          console.error('[Needle] Worker failed to initialize:', err);
           const statusEl = document.getElementById('needleStatus');
-          if (statusEl) statusEl.innerText = '☁️';
+          if (statusEl) {
+            statusEl.innerText = '☁️';
+            statusEl.title = 'Cloud Active (Offline Engine Unavailable)';
+          }
         };
 
         needleWorker.postMessage({
@@ -2435,6 +2446,11 @@
 
     // Start App
     initAuth();
+    initNeedle();
+
+    // Global debug helpers
+    window.initNeedle = initNeedle;
+    window.evaluateWithNeedle = evaluateWithNeedle;
   </script>
 </body>
 </html>
