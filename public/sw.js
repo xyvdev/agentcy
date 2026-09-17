@@ -1,10 +1,15 @@
-const CACHE_NAME = "agentcy-cache-v4";
+const CACHE_NAME = "agentcy-cache-v5";
 const STATIC_ASSETS = [
   "/",
   "/index.html",
   "/manifest.json",
   "/icon.svg",
-  "/heic2any.min.js"
+  "/heic2any.min.js",
+  "/client-tools.js",
+  "/vector-store.js",
+  "/needle-worker.js",
+  "/needle/needle.js",
+  "/needle/needle.wasm"
 ];
 
 self.addEventListener("install", (event) => {

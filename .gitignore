@@ -2,3 +2,7 @@
 node_modules/
 .env
 .env.local
+
+# Needle model weights (exceeds Cloudflare Pages 25MB limit; streamed & cached on-device)
+*.cact
+needle3.cact

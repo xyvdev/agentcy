@@ -30,6 +30,10 @@
   <!-- Vendored Client-Side HEIC to JPEG Converter -->
   <script src="/heic2any.min.js"></script>
 
+  <!-- Client-Side Needle Tools & Vector Store -->
+  <script src="/client-tools.js"></script>
+  <script src="/vector-store.js"></script>
+
   <style>
     /* ================= DESIGN SYSTEM TOKENS ================= */
     :root, [data-theme="dark"] {
@@ -758,6 +762,24 @@
       padding-left: 6px;
     }
 
+    .msg-origin-badge {
+      font-size: 13px;
+      line-height: 1;
+      opacity: 0.85;
+      user-select: none;
+      cursor: default;
+    }
+
+    .needle-status {
+      font-size: 12px;
+      font-weight: 600;
+      user-select: none;
+      cursor: default;
+      display: inline-block;
+      vertical-align: middle;
+      transition: opacity 0.2s;
+    }
+
     .action-btn {
       background: transparent;
       border: none;
@@ -1134,7 +1156,7 @@
             <span>Agent</span>
             <span id="userBadge" class="user-pill">Ma'am Leth</span>
           </div>
-          <div class="assistant-role">Personal Agent • Online</div>
+          <div class="assistant-role">Personal Agent • <span id="needleStatus" class="needle-status" title="Cloud Active">☁️</span></div>
         </div>
       </div>
 
@@ -1398,6 +1420,7 @@
       welcomeGreeting.innerText = `Good day, ${state.displayName}! I'm Agent.`;
       initSession();
       renderChips();
+      initNeedle();
 
       // One-time Permissions Prompt for mobile features
       checkPermissionsPrompt();
@@ -1487,6 +1510,131 @@
         state.user = null;
         loginScreen.classList.remove('hidden');
     });
+
+    /* ================= ON-DEVICE ENGINE (NEEDLE WASM) ================= */
+    let needleWorker = null;
+    let needleReady = false;
+    const pendingNeedleRequests = new Map();
+
+    function initNeedle() {
+      if (needleWorker) return;
+      try {
+        needleWorker = new Worker('/needle-worker.js');
+
+        needleWorker.onmessage = async (e) => {
+          const { type, id, data, vector, percent, error } = e.data;
+          const statusEl = document.getElementById('needleStatus');
+
+          switch (type) {
+            case 'PROGRESS':
+              if (statusEl) {
+                statusEl.innerText = `⏳ (${percent}%)`;
+                statusEl.title = `Downloading Offline Engine (${percent}%)`;
+              }
+              break;
+
+            case 'READY':
+              needleReady = true;
+              if (statusEl) {
+                statusEl.innerText = '⚡';
+                statusEl.title = 'Offline Engine Ready';
+              }
+              console.log('[Needle] Engine ready on-device.');
+              break;
+
+            case 'ERROR':
+              console.warn('[Needle] Worker error:', error);
+              needleReady = false;
+              if (statusEl) {
+                statusEl.innerText = '☁️';
+                statusEl.title = 'Cloud Active (Offline Engine Unavailable)';
+              }
+              break;
+
+            case 'EVALUATE_RESULT':
+              if (pendingNeedleRequests.has(id)) {
+                const resolver = pendingNeedleRequests.get(id);
+                pendingNeedleRequests.delete(id);
+                resolver(data);
+              }
+              break;
+
+            case 'EMBED_RESULT':
+              if (pendingNeedleRequests.has(id)) {
+                const resolver = pendingNeedleRequests.get(id);
+                pendingNeedleRequests.delete(id);
+                resolver(vector);
+              }
+              break;
+          }
+        };
+
+        needleWorker.onerror = (err) => {
+          console.warn('[Needle] Worker failed to initialize:', err);
+          const statusEl = document.getElementById('needleStatus');
+          if (statusEl) statusEl.innerText = '☁️';
+        };
+
+        needleWorker.postMessage({
+          type: 'INIT',
+          payload: {
+            tools: typeof CLIENT_TOOLS !== 'undefined' ? CLIENT_TOOLS : [],
+            system: `date: ${new Date().toISOString().slice(0, 10)}; locale: ${navigator.language || 'en-US'}; device: phone`
+          }
+        });
+      } catch (err) {
+        console.warn('[Needle] Web Worker unsupported or failed:', err);
+        const statusEl = document.getElementById('needleStatus');
+        if (statusEl) statusEl.innerText = '☁️';
+      }
+    }
+
+    function evaluateWithNeedle(text) {
+      if (!needleWorker || !needleReady) return Promise.resolve(null);
+      return new Promise((resolve) => {
+        const id = 'req_' + Math.random().toString(36).slice(2, 9);
+        const timeout = setTimeout(() => {
+          pendingNeedleRequests.delete(id);
+          resolve(null);
+        }, 1500);
+        pendingNeedleRequests.set(id, (data) => {
+          clearTimeout(timeout);
+          resolve(data);
+        });
+        needleWorker.postMessage({
+          type: 'COMPLETE',
+          id,
+          payload: { text, maxNewTokens: 128 }
+        });
+      });
+    }
+
+    function embedWithNeedle(text) {
+      if (!needleWorker || !needleReady) return Promise.resolve(null);
+      return new Promise((resolve) => {
+        const id = 'emb_' + Math.random().toString(36).slice(2, 9);
+        const timeout = setTimeout(() => {
+          pendingNeedleRequests.delete(id);
+          resolve(null);
+        }, 1500);
+        pendingNeedleRequests.set(id, (vec) => {
+          clearTimeout(timeout);
+          resolve(vec);
+        });
+        needleWorker.postMessage({
+          type: 'EMBED',
+          id,
+          payload: { text }
+        });
+      });
+    }
+
+    window.testNeedle = async (prompt) => {
+      console.log(`[Needle Test] Evaluating prompt: "${prompt}"...`);
+      const res = await evaluateWithNeedle(prompt);
+      console.log("[Needle Test Result]:", res);
+      return res;
+    };
 
     /* ================= SESSIONS & HISTORY ================= */
     function initSession() {
@@ -1619,12 +1767,12 @@
       chatLog.querySelectorAll('.msg-row').forEach(el => el.remove());
 
       state.messages.forEach((msg, idx) => {
-        appendMessageElement(msg.role, msg.content, idx, msg.image);
+        appendMessageElement(msg.role, msg.content, idx, msg.image, msg.source || 'cloud');
       });
       chatLog.scrollTop = chatLog.scrollHeight;
     }
 
-    function appendMessageElement(role, content, idx, imageData = null) {
+    function appendMessageElement(role, content, idx, imageData = null, source = 'cloud') {
       const row = document.createElement('div');
       row.className = `msg-row ${role}`;
       row.id = `msg-${idx}`;
@@ -1652,6 +1800,13 @@
       if (role === 'assistant') {
         const actions = document.createElement('div');
         actions.className = 'msg-actions';
+
+        // Origin badge: ⚡ for on-device, ☁️ for cloud
+        const originBadge = document.createElement('span');
+        originBadge.className = 'msg-origin-badge';
+        originBadge.innerText = source === 'local' ? '⚡' : '☁️';
+        originBadge.title = source === 'local' ? 'Processed on-device' : 'Processed in cloud';
+        actions.appendChild(originBadge);
 
         // Read aloud button
         const ttsBtn = document.createElement('button');
@@ -2004,7 +2159,36 @@
         promptToSend = `[Attached Photo: ${attached.name}]\n${promptToSend}`;
       }
 
-      // Create streaming assistant message bubble
+      // 1. Intercept with on-device Needle engine (if no image attached and engine ready)
+      if (!attached && needleReady) {
+        try {
+          const needleResult = await evaluateWithNeedle(text);
+          if (needleResult && needleResult.type === 'call' && needleResult.function_calls && needleResult.function_calls.length > 0 && (needleResult.confidence === null || needleResult.confidence >= 0.70)) {
+            const call = needleResult.function_calls[0];
+            const execution = await executeClientTool(call.name, call.arguments);
+            if (execution && execution.handled) {
+              const botMsgIndex = state.messages.length;
+              state.messages.push({ role: 'assistant', content: execution.message, source: 'local' });
+              appendMessageElement('assistant', execution.message, botMsgIndex, null, 'local');
+              saveMessages();
+              if (state.user) {
+                localStorage.setItem(`agentcy_last_chat_${state.user}`, JSON.stringify(state.messages));
+              }
+              renderChips();
+              if (needleReady) {
+                embedWithNeedle(displayText).then((vec) => {
+                  if (vec && typeof vectorStore !== 'undefined') vectorStore.saveMessageVector(userMsgIndex, state.sessionId, 'user', displayText, vec);
+                }).catch(() => {});
+              }
+              return; // Handled 100% on-device! 0 bytes leave phone.
+            }
+          }
+        } catch (localErr) {
+          console.warn('[Needle] Local evaluation fallback:', localErr);
+        }
+      }
+
+      // 2. Fall back to VPS Hermes Agent Bridge
       state.isGenerating = true;
       sendBtn.disabled = true;
 
@@ -2095,6 +2279,14 @@
         // Actions
         const actions = document.createElement('div');
         actions.className = 'msg-actions';
+
+        // Cloud Origin Badge
+        const originBadge = document.createElement('span');
+        originBadge.className = 'msg-origin-badge';
+        originBadge.innerText = '☁️';
+        originBadge.title = 'Processed in cloud';
+        actions.appendChild(originBadge);
+
         const ttsBtn = document.createElement('button');
         ttsBtn.className = 'action-btn';
         ttsBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg> Read Aloud`;
@@ -2112,12 +2304,22 @@
         actions.appendChild(copyBtn);
         botRow.appendChild(actions);
 
-        state.messages.push({ role: 'assistant', content: fullResponse });
+        state.messages.push({ role: 'assistant', content: fullResponse, source: 'cloud' });
         saveMessages();
         if (state.user) {
           localStorage.setItem(`agentcy_last_chat_${state.user}`, JSON.stringify(state.messages));
         }
         renderChips();
+
+        // Asynchronously embed conversation turn for local semantic search
+        if (needleReady) {
+          embedWithNeedle(displayText).then((vec) => {
+            if (vec && typeof vectorStore !== 'undefined') vectorStore.saveMessageVector(userMsgIndex, state.sessionId, 'user', displayText, vec);
+          }).catch(() => {});
+          embedWithNeedle(fullResponse).then((vec) => {
+            if (vec && typeof vectorStore !== 'undefined') vectorStore.saveMessageVector(botMsgIndex, state.sessionId, 'assistant', fullResponse, vec);
+          }).catch(() => {});
+        }
       } catch (err) {
         botBubble.innerHTML = `<p style="color: #fca5a5;">⚠️ ${err.message}</p>`;
       } finally {
