@@ -57,7 +57,10 @@
       --radius-sm: 10px;
       --radius-md: 16px;
       --radius-lg: 24px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
     }
 
     [data-theme="light"] {
@@ -112,7 +115,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: calc(20px + var(--safe-top)) calc(20px + var(--safe-right)) calc(20px + var(--safe-bottom)) calc(20px + var(--safe-left));
       transition: opacity 0.3s ease, visibility 0.3s ease;
     }
 
@@ -255,7 +258,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: calc(20px + var(--safe-top)) calc(20px + var(--safe-right)) calc(20px + var(--safe-bottom)) calc(20px + var(--safe-left));
       transition: opacity 0.3s ease, visibility 0.3s ease;
     }
 
@@ -423,12 +426,16 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 18px;
+      padding-top: calc(14px + var(--safe-top));
+      padding-right: calc(18px + var(--safe-right));
+      padding-bottom: 14px;
+      padding-left: calc(18px + var(--safe-left));
       background: var(--header-bg);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--surface-border);
       z-index: 10;
+      flex-shrink: 0;
     }
 
     .header-assistant {
@@ -523,10 +530,73 @@
       transform: scale(0.95);
     }
 
+    @media (max-width: 420px) {
+      header {
+        padding-left: calc(12px + var(--safe-left));
+        padding-right: calc(12px + var(--safe-right));
+      }
+      .header-assistant {
+        gap: 8px;
+      }
+      .assistant-name {
+        font-size: 15px;
+      }
+      .btn-header span:not(#themeIcon) {
+        display: none;
+      }
+    }
+
+    /* Pull-to-Refresh Indicator */
+    .pull-indicator {
+      height: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface);
+      border-bottom: 0px solid var(--surface-border);
+      transition: height 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s ease, border-bottom-width 0.2s ease;
+      opacity: 0;
+      flex-shrink: 0;
+      z-index: 9;
+    }
+
+    .pull-indicator.active {
+      border-bottom: 1px solid var(--surface-border);
+      opacity: 1;
+    }
+
+    .pull-indicator-content {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .pull-spinner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      transition: transform 0.15s ease;
+    }
+
+    .pull-spinner.spinning svg {
+      animation: pullSpin 0.75s linear infinite;
+    }
+
+    @keyframes pullSpin {
+      100% { transform: rotate(360deg); }
+    }
+
     /* Chat Log */
     #chatLog {
       flex: 1;
       overflow-y: auto;
+      overscroll-behavior-y: contain;
+      -webkit-overflow-scrolling: touch;
       padding: 20px 16px;
       display: flex;
       flex-direction: column;
@@ -735,7 +805,7 @@
 
     /* Footer & Input Bar */
     footer {
-      padding: 10px 16px calc(12px + var(--safe-bottom));
+      padding: 10px calc(16px + var(--safe-right)) calc(12px + var(--safe-bottom)) calc(16px + var(--safe-left));
       background: var(--footer-bg);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
@@ -934,7 +1004,7 @@
     /* App Toast */
     .app-toast {
       position: fixed;
-      top: 18px;
+      top: calc(18px + var(--safe-top));
       left: 50%;
       transform: translateX(-50%) translateY(-40px);
       background: var(--surface);
@@ -1084,6 +1154,18 @@
         </button>
       </div>
     </header>
+
+    <!-- Pull-to-Refresh Indicator (iOS & Android Universal) -->
+    <div id="pullIndicator" class="pull-indicator">
+      <div class="pull-indicator-content">
+        <div class="pull-spinner" id="pullSpinner">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          </svg>
+        </div>
+        <span id="pullText" class="pull-text">Pull to refresh</span>
+      </div>
+    </div>
 
     <div id="chatLog">
       <!-- Welcome Card (rendered when empty) -->
@@ -2044,6 +2126,110 @@
         chatLog.scrollTop = chatLog.scrollHeight;
       }
     }
+
+    /* ================= PULL-DOWN-TO-REFRESH (UNIVERSAL MOBILE) ================= */
+    (function initPullToRefresh() {
+      const indicator = document.getElementById('pullIndicator');
+      const spinner = document.getElementById('pullSpinner');
+      const text = document.getElementById('pullText');
+      const container = document.getElementById('chatLog');
+      const header = document.querySelector('header');
+      if (!indicator || !container) return;
+
+      let startY = 0;
+      let currentY = 0;
+      let isPulling = false;
+      let isRefreshing = false;
+      const PULL_THRESHOLD = 60; // activation distance in px
+      const MAX_PULL = 78;
+
+      function onTouchStart(e, isHeaderTouch = false) {
+        if (isRefreshing || e.touches.length !== 1) return;
+        if (isHeaderTouch && e.target.closest('button')) return;
+
+        if (isHeaderTouch || container.scrollTop <= 0) {
+          startY = e.touches[0].clientY;
+          currentY = startY;
+          isPulling = true;
+          indicator.style.transition = 'none';
+        }
+      }
+
+      function onTouchMove(e) {
+        if (!isPulling || isRefreshing) return;
+        currentY = e.touches[0].clientY;
+        const dy = currentY - startY;
+
+        if (dy > 0 && container.scrollTop <= 0) {
+          if (e.cancelable) e.preventDefault();
+          const pullDist = Math.min(MAX_PULL, dy * 0.45);
+          indicator.style.height = `${pullDist}px`;
+          indicator.classList.add('active');
+
+          const progress = Math.min(1, pullDist / PULL_THRESHOLD);
+          spinner.style.transform = `rotate(${progress * 180}deg)`;
+
+          if (pullDist >= PULL_THRESHOLD) {
+            if (text.innerText !== 'Release to update') {
+              text.innerText = 'Release to update';
+              if (navigator.vibrate) navigator.vibrate(14);
+            }
+          } else {
+            text.innerText = 'Pull to refresh';
+          }
+        } else {
+          indicator.style.height = '0px';
+          indicator.classList.remove('active');
+        }
+      }
+
+      async function onTouchEnd() {
+        if (!isPulling || isRefreshing) return;
+        isPulling = false;
+        indicator.style.transition = 'height 0.25s ease, opacity 0.2s ease';
+
+        const dy = currentY - startY;
+        const pullDist = Math.min(MAX_PULL, dy * 0.45);
+
+        if (dy > 0 && pullDist >= PULL_THRESHOLD && container.scrollTop <= 0) {
+          isRefreshing = true;
+          indicator.style.height = '46px';
+          text.innerText = 'Checking for updates...';
+          spinner.classList.add('spinning');
+
+          try {
+            if ('serviceWorker' in navigator) {
+              const reg = await navigator.serviceWorker.getRegistration();
+              if (reg) await reg.update();
+            }
+          } catch (err) {
+            console.warn('SW update check error:', err);
+          }
+
+          setTimeout(() => {
+            text.innerText = 'Refreshing...';
+            window.location.reload();
+          }, 450);
+        } else {
+          indicator.style.height = '0px';
+          indicator.classList.remove('active');
+          setTimeout(() => {
+            spinner.style.transform = 'rotate(0deg)';
+            text.innerText = 'Pull to refresh';
+          }, 250);
+        }
+      }
+
+      container.addEventListener('touchstart', (e) => onTouchStart(e, false), { passive: true });
+      container.addEventListener('touchmove', onTouchMove, { passive: false });
+      container.addEventListener('touchend', onTouchEnd, { passive: true });
+
+      if (header) {
+        header.addEventListener('touchstart', (e) => onTouchStart(e, true), { passive: true });
+        header.addEventListener('touchmove', onTouchMove, { passive: false });
+        header.addEventListener('touchend', onTouchEnd, { passive: true });
+      }
+    })();
 
     // Start App
     initAuth();
